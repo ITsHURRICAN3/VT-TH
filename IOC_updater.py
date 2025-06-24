@@ -12,6 +12,7 @@ headers = {
     "content-type": "application/json"
 }
 
+# Check if the collection exists and print collection info
 check = requests.get(url, headers=headers)
 try:
     check_json = check.json()
@@ -26,8 +27,19 @@ try:
             exit(1)
     elif "data" in check_json:
         print("✅ Collection exists. Here are the collection details:")
+        print("ID:", check_json["data"].get("id", "N/A"))
         attributes = check_json["data"].get("attributes", {})
         print("Name:", attributes.get("name", "N/A"))
+        print("Description:", attributes.get("description", "N/A"))
+
+        counters = attributes.get("counters", {})
+        print("Number of IOCs:", counters.get("iocs", "N/A"))
+        print("Files:", counters.get("files", "N/A"))
+        print("Domains:", counters.get("domains", "N/A"))
+        print("IP addresses:", counters.get("ip_addresses", "N/A"))
+        print("URLs:", counters.get("urls", "N/A"))
+
+        # Convert and print creation and modification dates using timezone-aware UTC
         creation_ts = attributes.get("creation_date", None)
         last_mod_ts = attributes.get("last_modification_date", None)
         if isinstance(creation_ts, int):
@@ -40,12 +52,6 @@ try:
             last_mod_date = "N/A"
         print("Creation date:", creation_date)
         print("Last modification date:", last_mod_date)
-        counters = attributes.get("counters", {})
-        print("Number of IOCs:", counters.get("iocs", "N/A"))
-        print("Files:", counters.get("files", "N/A"))
-        print("Domains:", counters.get("domains", "N/A"))
-        print("IP addresses:", counters.get("ip_addresses", "N/A"))
-        print("URLs:", counters.get("urls", "N/A"))
     else:
         print("⚠️ Unexpected response while checking collection:")
         print(check_json)
@@ -54,35 +60,86 @@ except Exception as e:
     print(f"Error checking collection: {str(e)}")
     exit(1)
 
-while True:
-    ioc = input("Insert an IOC (or type 'exit' to quit): ")
-    if ioc.lower() == 'exit':
-        print("Exiting the program...")
-        break
+print("\nChoose how to insert IOCs:")
+print("  1. Manual input (type one or more IoCs, separated by comma)")
+print("  2. From file (provide a file path with a list of IoCs)")
+method = input("Type 'manual' or 'file': ").strip().lower()
 
-    payload = {
-        "data": {
-            "attributes": {
-                "name": attributes.get("name")
-            },
-            "raw_items": ioc,
-            "type": "collection"
-        }
-    }
-
+if method == "file":
+    file_path = input("Insert the path to the file containing the IoCs: ").strip()
     try:
-        response = requests.patch(url, json=payload, headers=headers)
-        resp_json = response.json()
-        if "error" in resp_json:
-            error_code = resp_json["error"].get("code", "")
-            error_message = resp_json["error"].get("message", "")
-            print(f"❌ Error: {error_code} - {error_message}")
-        elif resp_json == {}:
-            print("❌ Insertion failed! The response is empty ({}).")
-        elif 'data' in resp_json:
-            print("✅ Insertion succeeded!")
-        else:
-            print("⚠️ Unexpected API response:")
-            print(resp_json)
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+        iocs = []
+        for line in lines:
+            for ioc in line.strip().split(","):
+                ioc = ioc.strip()
+                if ioc:
+                    iocs.append(ioc)
+        iocs_string = ",".join(iocs)
+        print(f"Loaded {len(iocs)} IoCs from file.")
+        
+        payload = {
+            "data": {
+                "attributes": {
+                    "name": attributes.get("name")
+                },
+                "raw_items": iocs_string,
+                "type": "collection"
+            }
+        }
+        try:
+            response = requests.patch(url, json=payload, headers=headers)
+            resp_json = response.json()
+            if "error" in resp_json:
+                error_code = resp_json["error"].get("code", "")
+                error_message = resp_json["error"].get("message", "")
+                print(f"❌ Error: {error_code} - {error_message}")
+            elif resp_json == {}:
+                print("❌ Insertion failed! The response is empty ({}).")
+            elif 'data' in resp_json:
+                print("✅ Insertion succeeded! API response:")
+            else:
+                print("⚠️ Unexpected API response:")
+                print(resp_json)
+        except Exception as e:
+            print(f"Error occurred: {str(e)}")
+
+    except FileNotFoundError:
+        print("❌ File not found. Please check the path and try again.")
     except Exception as e:
-        print(f"Error occurred: {str(e)}")
+        print(f"Error reading file: {str(e)}")
+
+else:
+    while True:
+        ioc = input("Insert an IOC (or type 'exit' to quit): ")
+        if ioc.lower() == 'exit':
+            print("Exiting the program...")
+            break
+
+        payload = {
+            "data": {
+                "attributes": {
+                    "name": attributes.get("name")
+                },
+                "raw_items": ioc,
+                "type": "collection"
+            }
+        }
+
+        try:
+            response = requests.patch(url, json=payload, headers=headers)
+            resp_json = response.json()
+            if "error" in resp_json:
+                error_code = resp_json["error"].get("code", "")
+                error_message = resp_json["error"].get("message", "")
+                print(f"❌ Error: {error_code} - {error_message}")
+            elif resp_json == {}:
+                print("❌ Insertion failed! The response is empty ({}).")
+            elif 'data' in resp_json:
+                print("✅ Insertion succeeded! API response:")
+            else:
+                print("⚠️ Unexpected API response:")
+                print(resp_json)
+        except Exception as e:
+            print(f"Error occurred: {str(e)}")
