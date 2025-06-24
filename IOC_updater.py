@@ -1,8 +1,9 @@
 import requests
 from datetime import datetime, UTC
+from getpass import getpass
 
 collection_id = input("Insert collection ID: ")
-api_key = input("Insert VT API key: ")
+api_key = getpass("Insert VT API key: ")
 
 url = f"https://www.virustotal.com/api/v3/collections/{collection_id}"
 
@@ -27,7 +28,6 @@ try:
             exit(1)
     elif "data" in check_json:
         print("✅ Collection exists. Here are the collection details:")
-        print("ID:", check_json["data"].get("id", "N/A"))
         attributes = check_json["data"].get("attributes", {})
         print("Name:", attributes.get("name", "N/A"))
         print("Description:", attributes.get("description", "N/A"))
@@ -66,7 +66,7 @@ print("  2. From file (provide a file path with a list of IoCs)")
 method = input("Type 'manual' or 'file': ").strip().lower()
 
 if method == "file":
-    file_path = input("Insert the path to the file containing the IoCs: ").strip()
+    file_path = input("Insert the path to the file containing the IoCs: ").strip().strip('"')
     try:
         with open(file_path, "r") as f:
             lines = f.readlines()
