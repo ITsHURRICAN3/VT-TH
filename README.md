@@ -4,8 +4,8 @@ Python tool used mainly for threat hunting activities, automating the interactio
 ## Requirements
 - Python >= 3.13.2
 - requests module
-- datetime module (usually pre-installed)
-- getpass module
+- datetime module (part of standard library)
+- getpass module (part of standard library)
 
 ## Usage
 - Run IOC_updater.py
