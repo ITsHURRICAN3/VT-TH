@@ -1,4 +1,4 @@
-# VT Hunting
+# VT Hunting - IOC updater
 Python tool used mainly for threat hunting activities, automating the interaction with VT IOCs collection
 
 ## Requirements
