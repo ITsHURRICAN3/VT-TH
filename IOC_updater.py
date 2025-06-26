@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime, UTC
 from getpass import getpass
+from ioc_validator import validate_ioc
 
 collection_id = input("Insert collection ID: ")
 api_key = getpass("Insert VT API key: ")
@@ -13,7 +14,6 @@ headers = {
     "content-type": "application/json"
 }
 
-# Check if the collection exists and print collection info
 check = requests.get(url, headers=headers)
 try:
     check_json = check.json()
@@ -82,11 +82,17 @@ while True:
                     ioc = ioc.strip()
                     if ioc:
                         iocs.append(ioc)
-            if not iocs:
+            valid_iocs = [ioc for ioc in iocs if validate_ioc(ioc)]
+            invalid_iocs = [ioc for ioc in iocs if not validate_ioc(ioc)]
+            if not valid_iocs:
                 print("⚠️ No valid IoCs found in the file.")
+                if invalid_iocs:
+                    print("Invalid IoCs:", ", ".join(invalid_iocs))
                 continue
-            iocs_string = ",".join(iocs)
-            print(f"Loaded {len(iocs)} IoCs from file.")
+            iocs_string = ",".join(valid_iocs)
+            print(f"Loaded {len(valid_iocs)} valid IoCs from file.")
+            if invalid_iocs:
+                print(f"Discarded {len(invalid_iocs)} invalid IoCs: {', '.join(invalid_iocs)}")
 
             payload = {
                 "data": {
@@ -120,19 +126,31 @@ while True:
 
     elif method == "manual":
         while True:
-            ioc = input("Insert an IOC (or type 'back' to return to menu): ")
-            if ioc.lower() == 'back':
+            ioc_input = input("Insert an IOC (or type 'back' to return to menu): ")
+            if ioc_input.lower() == 'back':
                 break
-            if not ioc.strip():
+            if not ioc_input.strip():
                 print("⚠️ Please enter at least one IoC or type 'back' to return.")
                 continue
+
+            iocs = [ioc.strip() for ioc in ioc_input.split(",") if ioc.strip()]
+            valid_iocs = [ioc for ioc in iocs if validate_ioc(ioc)]
+            invalid_iocs = [ioc for ioc in iocs if not validate_ioc(ioc)]
+            if not valid_iocs:
+                print("⚠️ No valid IoCs entered.")
+                if invalid_iocs:
+                    print("Invalid IoCs:", ", ".join(invalid_iocs))
+                continue
+            iocs_string = ",".join(valid_iocs)
+            if invalid_iocs:
+                print(f"Discarded {len(invalid_iocs)} invalid IoCs: {', '.join(invalid_iocs)}")
 
             payload = {
                 "data": {
                     "attributes": {
                         "name": attributes.get("name")
                     },
-                    "raw_items": ioc,
+                    "raw_items": iocs_string,
                     "type": "collection"
                 }
             }
